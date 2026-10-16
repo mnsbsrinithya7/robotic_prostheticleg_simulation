@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prosthetic Leg Simulator</title>
+<style>
+:root{--bg:#0a1120;--pn:#0f1a30;--bd:#1c2d4d;--tx:#e8eefc;--mu:#8fa3c7;--ac:#2f7bff;--gr:#17c25b;--rd:#e5393f;--or:#ffa91f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.35 Arial,sans-serif}
+.app{display:grid;grid-template-columns:270px minmax(0,1fr) 290px;grid-template-areas:"hd hd hd" "l c r" "ch ch gi";gap:14px;padding:14px;max-width:1500px;margin:auto}
+.pn{background:var(--pn);border:1px solid var(--bd);border-radius:12px;padding:14px;min-width:0}
+h1{font-size:22px;margin:0}h2{font-size:17px;margin:0 0 10px}.sub{color:var(--mu);font-size:13px}
+#hd{grid-area:hd;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ok{background:#12233a;border:1px solid var(--bd);border-radius:8px;padding:8px 14px}.ok:before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--gr);margin-right:8px}
+.row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #15243f}.row b{font-weight:600}.mu{color:var(--mu)}
+.sec{margin:10px 0 4px;font-weight:700;font-size:13px}
+#view{position:relative;height:560px;border-radius:12px;overflow:hidden;border:1px solid var(--bd);cursor:grab}
+#view canvas{display:block}.ov{position:absolute;background:rgba(10,17,32,.78);border:1px solid var(--bd);border-radius:10px;padding:9px 14px}
+.btn{background:#13213b;color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:9px 12px;cursor:pointer;font:inherit}
+.btn.on{background:var(--ac);border-color:var(--ac)}.btn:hover{filter:brightness(1.15)}
+.act{display:block;width:100%;text-align:left;margin-bottom:7px}
+.start{background:var(--gr);border-color:var(--gr);font-weight:700}.stop{background:var(--rd);border-color:var(--rd);font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.three{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.met{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.big{font-size:26px;font-weight:700;color:var(--gr)}
+label{display:block;margin:10px 0 4px}input[type=range]{width:100%;accent-color:var(--ac)}.v{float:right;background:#13213b;border:1px solid var(--bd);border-radius:6px;padding:0 8px}
+canvas.ch{width:100%;height:190px;display:block}.leg{width:100%}
+.foot{color:var(--mu);font-size:12px;margin-top:8px}
+#hdl{grid-area:hd}#l{grid-area:l}#c{grid-area:c}#r{grid-area:r}#chs{grid-area:ch}#gi{grid-area:gi}
+@media(max-width:1000px){.app{grid-template-columns:1fr;grid-template-areas:"hd" "c" "r" "l" "ch" "gi"}#view{height:420px}.two{grid-template-columns:1fr}.met{grid-template-columns:1fr 1fr}}
+</style></head><body>
+<div class="app">
+ <div class="pn" id="hd"><div><h1>🦿 Prosthetic Leg Simulator</h1><div class="sub">3D human motion simulation with model-based control · two-link Lagrangian prosthesis</div></div><div class="ok">System Ready</div></div>
+
+ <div id="l"><div class="pn"><h2>Human Leg</h2>
+  <div class="sec">Length (cm)</div><div class="row"><span>Thigh</span><b>45.2</b></div><div class="row"><span>Shin</span><b>43.1</b></div><div class="row"><span>Foot</span><b>25.0</b></div>
+  <div class="sec">Joint angles (°)</div><div class="row"><span>Hip</span><b id="hh">0</b></div><div class="row"><span>Knee</span><b id="hk">0</b></div><div class="row"><span>Ankle</span><b id="ha">0</b></div></div>
+  <div class="pn" style="margin-top:14px"><h2>Prosthetic Leg</h2>
+  <div class="sec">Length (cm)</div><div class="row"><span>Thigh</span><b>45.0</b></div><div class="row"><span>Shin</span><b>42.8</b></div><div class="row"><span>Foot</span><b>24.8</b></div>
+  <div class="sec">Joint angles (°)</div><div class="row"><span>Hip</span><b id="ph">0</b></div><div class="row"><span>Knee</span><b id="pk">0</b></div><div class="row"><span>Ankle</span><b id="pa">0</b></div>
+  <div class="sec">Comparison (ratio)</div><div class="row"><span>Thigh</span><b>0.99</b></div><div class="row"><span>Shin</span><b>0.99</b></div><div class="row"><span>Foot</span><b>0.99</b></div></div></div>
+
+ <div id="c"><div id="view">
+   <div class="ov" style="left:12px;top:12px;font-size:17px"><span class="mu">Activity:</span> <b id="actname">Running</b></div>
+   <div class="ov" style="right:12px;top:12px">Speed: <b id="spd">0</b> m/s<br>Time: <b id="tm">0</b> s</div>
+   <div class="ov" style="left:50%;bottom:12px;transform:translateX(-50%);padding:6px"><button class="btn" data-v="front">Front</button> <button class="btn on" data-v="side">Side</button> <button class="btn" data-v="back">Back</button></div></div>
+  <div class="pn met"><div><b class="mu">Tracking error (rad)</b><div class="row"><span>Hip</span><b id="eh">0</b></div><div class="row"><span>Knee</span><b id="ek">0</b></div></div>
+   <div><b class="mu">Control torque (Nm)</b><div class="row"><span>Hip</span><b id="th">0</b></div><div class="row"><span>Knee</span><b id="tk">0</b></div></div>
+   <div><b class="mu">Energy (J)</b><div class="row"><span>Total</span><b id="en">0</b></div><div class="row"><span>Mean power (W)</span><b id="pw">0</b></div></div>
+   <div><b class="mu">Constraint violation</b><div class="big" id="cv">0%</div></div></div></div>
+
+ <div id="r"><div class="pn"><h2>Activity Selection</h2>
+   <button class="btn act" data-a="walking">🚶 Walking</button><button class="btn act" data-a="jogging">🏃 Jogging</button><button class="btn act on" data-a="running">🏃‍♂️ Running</button>
+   <button class="btn act" data-a="stairsup">🪜 Stairs Up</button><button class="btn act" data-a="stairsdown">⬇️ Stairs Down</button>
+   <div class="two"><button class="btn start" id="go">▶ Start</button><button class="btn stop" id="stop">■ Stop</button></div></div>
+  <div class="pn" style="margin-top:14px"><h2>Advanced Settings</h2>
+   <div id="simctl"><label>Gait frequency (Hz) <span class="v" id="fv">1.4</span></label><input type="range" id="fr" min=".5" max="2" step=".05" value="1.4">
+   <label>Sensor noise (°) <span class="v" id="nv">0.3</span></label><input type="range" id="ns" min="0" max="2" step=".1" value=".3">
+   <label>Disturbance</label><input type="radio" name="d" value="none" checked> None &nbsp; <input type="radio" name="d" value="pulse"> Pulse
+   <label><input type="checkbox" id="ob" checked> Road obstacles (stones &amp; cracks)</label>
+   </div><label>Controller</label><div id="cbox"><input type="radio" name="c" value="pid"> PID &nbsp; <input type="radio" name="c" value="mpc" checked> MPC*</div><div id="simctl2">
+   <label>MPC horizon (N) <span class="v" id="hv">15</span></label><input type="range" id="hz" min="5" max="30" step="1" value="15">
+   <div class="foot">*Browser preview: model-based predictive controller. Exact QP-MPC results come from the Python app.</div></div></div>
+  <div class="pn" style="margin-top:14px"><h2>Camera Control</h2><div class="three"><button class="btn" id="rs">Reset</button><button class="btn" id="zi">Zoom In</button><button class="btn" id="zo">Zoom Out</button></div></div></div>
+
+ <div id="chs" class="two"><div class="pn"><h2>Hip Angle (°) <span class="sub" style="float:right"><span style="color:#3b82f6">- - Desired</span> &nbsp;<span style="color:var(--or)">— Actual</span></span></h2><canvas class="ch" id="c1"></canvas></div>
+  <div class="pn"><h2>Knee Angle (°) <span class="sub" style="float:right"><span style="color:#3b82f6">- - Desired</span> &nbsp;<span style="color:var(--or)">— Actual</span></span></h2><canvas class="ch" id="c2"></canvas></div></div>
+ <div id="gi" class="pn"><h2>Gait Cycle Info</h2><div class="row"><span class="mu">Number of strides</span><b id="gs">0</b></div><div class="row"><span class="mu">Stride peak CV</span><b id="gc">–</b></div><div class="row"><span class="mu">Gait distance (m)</span><b id="gd">0</b></div><div class="row"><span class="mu">Current step</span><b id="gp">–</b></div><div class="row"><span class="mu">Terrain</span><b id="gt">–</b></div><div class="row"><span class="mu">Contact force (N)</span><b id="gf">0</b></div></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=i=>document.getElementById(i),T=THREE,D2R=Math.PI/180;
+/* ---------- activities (periodic hip/knee references, phase 0..1) ---------- */
+const ACT={walking:{n:'Walking',f:.9,h0:.05,hA:.30,kc:.15,kp:1.0,v:1.2,lean:.03,arm:.5,elb:.4},
+ jogging:{n:'Jogging',f:1.15,h0:.12,hA:.40,kc:.25,kp:1.35,v:2.5,lean:.10,arm:.8,elb:1.0},
+ running:{n:'Running',f:1.4,h0:.15,hA:.50,kc:.35,kp:1.6,v:3.5,lean:.17,arm:1.1,elb:1.4},
+ stairsup:{n:'Stairs Up',f:.7,h0:.45,hA:.35,kc:.20,kp:1.5,v:.5,lean:.12,arm:.4,elb:.5,stairs:1},
+ stairsdown:{n:'Stairs Down',f:.7,h0:.10,hA:.30,kc:.50,kp:1.1,v:.5,lean:.05,arm:.3,elb:.4,stairs:-1}};
+const bump=(p,c,w)=>{const d=(((p-c+.5)%1)+1)%1-.5;return Math.exp(-.5*(d/w)**2)};
+const ref=(p,A)=>[A.h0+A.hA*Math.cos(6.2832*(p-.03)),-(.02+A.kc*bump(p,.15,.06)+A.kp*bump(p,.72,.1))];
+/* ---------- stair gait: same construction as prosthesis_mpc.StairGait (riser 17 cm, tread 28 cm) ----------
+   pelvis(p) = v*p + [surge, bounce]*sin(4*pi*p); stance = inverse kinematics with the foot fixed on its tread;
+   swing knots in deg (hip, knee flexion); joined by one periodic cubic spline. */
+const STPL={'1':{ic:[49,43],sw:[[.50,16,16],[.58,23,51],[.66,42,90],[.74,50,94],[.82,68,88],[.90,66,65],[.95,54,48]],toe:.17},
+ '-1':{ic:[16,10],sw:[[.50,31,81],[.58,35,95],[.66,46,95],[.74,46,52],[.82,30,23],[.90,23,12],[.95,19,9]],toe:.14}};
+const RISER=.17,TREAD=.28,STANCE=.42,W4=4*Math.PI;
+function gauss(A,b){const n=b.length,M=A.map((r,i)=>[...r,b[i]]);for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;[M[c],M[p]]=[M[p],M[c]];
+ for(let r=0;r<n;r++){if(r===c)continue;const f=M[r][c]/M[c][c];for(let k=c;k<=n;k++)M[r][k]-=f*M[c][k]}}return M.map((r,i)=>r[n]/r[i])}
+function pspline(P,Y){const n=P.length,h=P.map((p,i)=>(i<n-1?P[i+1]:1+P[0])-p),A=[...Array(n)].map(()=>Array(n).fill(0)),r=Array(n).fill(0);
+ for(let i=0;i<n;i++){const im=(i-1+n)%n,ip=(i+1)%n;A[i][im]+=h[im];A[i][i]+=2*(h[im]+h[i]);A[i][ip]+=h[i];r[i]=6*((Y[ip]-Y[i])/h[i]-(Y[i]-Y[im])/h[im])}
+ const M=gauss(A,r);
+ return p=>{p=((p%1)+1)%1;let i=n-1;for(let k=0;k<n-1;k++)if(p<P[k+1]){i=k;break}const ip=(i+1)%n,a=P[i]+h[i]-p,b=p-P[i],hh=h[i];
+  return M[i]*a**3/(6*hh)+M[ip]*b**3/(6*hh)+(Y[i]/hh-M[i]*hh/6)*a+(Y[ip]/hh-M[ip]*hh/6)*b}}
+function buildStairs(dir){const t=STPL[dir],v=[2*TREAD,dir*2*RISER],amp=[.008,.015];
+ const pel=p=>[v[0]*p+amp[0]*Math.sin(W4*p),v[1]*p+amp[1]*Math.sin(W4*p)],pelD=p=>[v[0]+amp[0]*W4*Math.cos(W4*p),v[1]+amp[1]*W4*Math.cos(W4*p)];
+ const fk=(h,k)=>[.45*Math.sin(h)+.45*Math.sin(h-k),-(.45*Math.cos(h)+.45*Math.cos(h-k))];
+ const ik=F=>{const c=Math.max(-1,Math.min(1,(F[0]*F[0]+F[1]*F[1]-.405)/.405)),q2=-Math.acos(c);return[Math.atan2(F[0],-F[1])-Math.atan2(.45*Math.sin(q2),.45+.45*Math.cos(q2)),q2]};
+ const o={dir,v,amp,toe:t.toe,pel,pelD},p0=pel(0),f0=fk(t.ic[0]*D2R,t.ic[1]*D2R);o.W=[p0[0]+f0[0],p0[1]+f0[1]];
+ const P=[],H=[],K=[];for(let i=0;i<22;i++){const p=STANCE*i/21,pp=pel(p),q=ik([o.W[0]-pp[0],o.W[1]-pp[1]]);P.push(p);H.push(q[0]);K.push(q[1])}
+ t.sw.forEach(s=>{P.push(s[0]);H.push(s[1]*D2R);K.push(-s[2]*D2R)});const sh=pspline(P,H),sk=pspline(P,K);
+ o.ref=p=>[sh(p),sk(p)];o.acc=p=>{const s=Math.sin(W4*p);return[-amp[0]*W4*W4*s,-amp[1]*W4*W4*s]};
+ o.tread=j=>{const x1=o.W[0]+j*TREAD+o.toe;return[x1-TREAD,x1,o.W[1]+j*dir*RISER+.004]};o.idx=x=>Math.floor((x-o.W[0]-o.toe)/TREAD)+1;return o}
+const SG={'1':buildStairs(1),'-1':buildStairs(-1)};
+/* ---------- Lagrangian two-link prosthesis (same model as the Python project) ---------- */
+const P0={m1:7,m2:4,l1:.45,l2:.45,c1:.2,c2:.2},PN=P0,PL={...P0,m1:8.75,m2:5},G9=9.81,UMAX=[150,120];let QMIN=[-.7,-1.9],QMAX=[.95,.03];
+function MCG(p,q,qd){const I1=p.m1*p.l1**2/12,I2=p.m2*p.l2**2/12,a=p.m2*p.l1*p.c2*Math.cos(q[1]),m12=p.m2*p.c2**2+a+I2;
+ const M=[[p.m1*p.c1**2+p.m2*(p.l1**2+p.c2**2)+2*a+I1+I2,m12],[m12,p.m2*p.c2**2+I2]],h=-p.m2*p.l1*p.c2*Math.sin(q[1]),s=Math.sin(q[0]+q[1]);
+ return{M,C:[h*(2*qd[0]*qd[1]+qd[1]**2),-h*qd[0]**2],G:[(p.m1*p.c1+p.m2*p.l1)*G9*Math.sin(q[0])+p.m2*p.c2*G9*s,p.m2*p.c2*G9*s]}}
+/* moving-hip (stairs) term B(q)*a, a = hip acceleration */
+function BB(p,q,a){const c1=Math.cos(q[0]),s1=Math.sin(q[0]),c12=Math.cos(q[0]+q[1]),s12=Math.sin(q[0]+q[1]);
+ return[(p.m1*p.c1*c1+p.m2*(p.l1*c1+p.c2*c12))*a[0]+(p.m1*p.c1*s1+p.m2*(p.l1*s1+p.c2*s12))*a[1],p.m2*p.c2*(c12*a[0]+s12*a[1])]}
+const slv=(M,b)=>{const d=M[0][0]*M[1][1]-M[0][1]*M[1][0];return[(b[0]*M[1][1]-M[0][1]*b[1])/d,(M[0][0]*b[1]-M[1][0]*b[0])/d]};
+const clampU=u=>[Math.max(-UMAX[0],Math.min(UMAX[0],u[0])),Math.max(-UMAX[1],Math.min(UMAX[1],u[1]))];
+const randn=()=>Math.sqrt(-2*Math.log(Math.random()+1e-12))*Math.cos(6.2832*Math.random());
+/* ---------- state ---------- */
+let act='running',A=ACT.running,S=null,running=true,t=0,phi=0,fHz=1.4,q,qd,u=[0,0],dh=[0,0],I=[0,0],xp=null,up=[0,0],ctrl='mpc',N=15,noise=.3,pulse=false;
+let dist=0,E=0,viol=0,steps=0,e2=[0,0],u2=[0,0],strides=0,peaks=[],minq=0,hist=[],lastS=0;
+let obsOn=true,obs=[],obsNext=0,gLevel=-.896,vg1=0,lastF=0;
+const refA=p=>S?S.ref(p):ref(p,A);
+const footY=qq=>-(.45*Math.cos(qq[0])+.45*Math.cos(qq[0]+qq[1])),footX=qq=>.45*Math.sin(qq[0])+.45*Math.sin(qq[0]+qq[1]);
+function setActivity(){S=A.stairs?SG[String(A.stairs)]:null;
+ if(S){let lo=[9,9],hi=[-9,-9];for(let i=0;i<400;i++){const r=S.ref(i/400);lo=[Math.min(lo[0],r[0]),Math.min(lo[1],r[1])];hi=[Math.max(hi[0],r[0]),Math.max(hi[1],r[1])]}
+  QMIN=[lo[0]-.2,lo[1]-.35];QMAX=[hi[0]+.25,.03]}else{QMIN=[-.7,-1.9];QMAX=[.95,.03]}
+ // road level (lowest reference foot point) and kinematically consistent ground speed per Hz (prosthesis reference)
+ const n=600,F=[...Array(n)].map((_,i)=>{const r=refA(i/n-.5);return[footX(r),footY(r)]});let im=0;F.forEach((f,i)=>{if(f[1]<F[im][1])im=i});
+ gLevel=F[im][1]+.004;let a=im,b=im;while(F[((a-1)%n+n)%n][1]<F[im][1]+.015&&b-a<n-1)a--;while(F[(b+1)%n][1]<F[im][1]+.015&&b-a<n-1)b++;
+ vg1=b>a?Math.max(0,-(F[b%n][0]-F[((a%n)+n)%n][0])/((b-a)/n)):0}
+function reset(){t=0;phi=0;const r=refA(-.5);q=[r[0]-.03,r[1]+.03];qd=[0,0];u=[0,0];dh=[0,0];I=[0,0];xp=null;dist=0;E=0;viol=0;steps=0;e2=[0,0];u2=[0,0];strides=0;peaks=[];minq=0;hist=[];lastS=0;obs=[];obsNext=4;lastF=0}
+setActivity();reset();
+/* hip (pelvis) world motion in the browser preview: stairs = planned pelvis path, level = road moving at ground speed */
+function hipNow(){if(S){const p=phi-.5,pp=S.pel(p),pd=S.pelD(p),a=S.acc(p);return{p:pp,v:[pd[0]*fHz,pd[1]*fHz],a:[a[0]*fHz*fHz,a[1]*fHz*fHz]}}
+ return{p:[dist,0],v:[vg1*fHz,0],a:null}}
+/* road obstacles (preview: random placement ahead of the walker) */
+function ensureObs(){if(S||!obsOn)return;while(obsNext<dist+30){obsNext+=1.2+Math.random()*3.5;
+  obs.push(Math.random()<.6?{k:'stone',x:obsNext,w:.08+Math.random()*.1,h:.02+Math.random()*.025}:{k:'crack',x:obsNext,w:.03+Math.random()*.05,h:-(.012+Math.random()*.013)})}
+ while(obs.length&&obs[0].x<dist-30){const o=obs.shift();if(o.m){scene.remove(o.m)}}}
+function obsAt(x){for(const o of obs){const d=x-o.x;if(Math.abs(d)<o.w/2){const w=6.2832/o.w;return[.5*o.h*(1+Math.cos(w*d)),-.5*o.h*w*Math.sin(w*d)]}}return null}
+/* spring-damper contact (paper Eq. 7) against stair treads/risers, or against stones (no road contact in the preview) */
+function contactJS(qq,qqd){if(!S&&!obsOn)return[0,0];const l=.45,c1=Math.cos(qq[0]),s1=Math.sin(qq[0]),c12=Math.cos(qq[0]+qq[1]),s12=Math.sin(qq[0]+qq[1]);
+ const J=[[l*c1+l*c12,l*c12],[l*s1+l*s12,l*s12]],v=[J[0][0]*qqd[0]+J[0][1]*qqd[1],J[1][0]*qqd[0]+J[1][1]*qqd[1]],hp=hipNow();
+ const xw=hp.p[0]+footX(qq),yw=hp.p[1]+footY(qq),vw=[v[0]+hp.v[0],v[1]+hp.v[1]];let d=0,n=null;
+ if(S){const j=S.idx(xw),tr=S.tread(j),dv=tr[2]-yw;if(dv>0){d=dv;n=[0,1];if(S.tread(j-1)[2]<yw&&xw-tr[0]<d){d=xw-tr[0];n=[-1,0]}if(S.tread(j+1)[2]<yw&&tr[1]-xw<d){d=tr[1]-xw;n=[1,0]}}}
+ else{const o=obsAt(xw);if(o&&o[0]>0){const pen=gLevel+o[0]-yw;if(pen>0){const nr=Math.hypot(1,o[1]);d=pen/nr;n=[-o[1]/nr,1/nr]}}}
+ if(!n){lastF=0;return[0,0]}const tv=[n[1],-n[0]],vn=vw[0]*n[0]+vw[1]*n[1],vt=vw[0]*tv[0]+vw[1]*tv[1],Fn=Math.max(0,2e4*d-100*vn),F=[Fn*n[0]-50*vt*tv[0],Fn*n[1]-50*vt*tv[1]];
+ lastF=Math.hypot(F[0],F[1]);return[J[0][0]*F[0]+J[1][0]*F[1],J[0][1]*F[0]+J[1][1]*F[1]]}
+function control(){ // runs at 50 Hz
+ const pr=phi-.5,r=refA(pr),d=.002,rp=refA(pr+d*fHz),rm=refA(pr-d*fHz);
+ const qr=r,qdr=[0,1].map(i=>(rp[i]-rm[i])/(2*d)),qddr=[0,1].map(i=>(rp[i]-2*r[i]+rm[i])/(d*d));
+ const qm=[q[0]+noise*D2R*randn(),q[1]+noise*D2R*randn()],qdm=[qd[0]+noise*D2R*3*randn(),qd[1]+noise*D2R*3*randn()];
+ const e=[qr[0]-qm[0],qr[1]-qm[1]],ed=[qdr[0]-qdm[0],qdr[1]-qdm[1]],n=MCG(PN,qm,qdm),ha=hipNow().a,bf=ha?BB(PN,qm,ha):[0,0];let uc;
+ if(ctrl==='pid'){I=[I[0]+e[0]*.02,I[1]+e[1]*.02];uc=[n.G[0]+bf[0]+120*e[0]+12*ed[0]+25*I[0],n.G[1]+bf[1]+60*e[1]+3.5*ed[1]+12*I[1]]}
+ else{ // model-based predictive: inverse dynamics + disturbance estimator, preview gains grow with horizon
+  if(xp){const pn=MCG(PN,xp[0],xp[1]),pb=ha?BB(PN,xp[0],ha):[0,0],tt=[up[0]+dh[0],up[1]+dh[1]],a=slv(pn.M,[tt[0]-pn.C[0]-pn.G[0]-pb[0],tt[1]-pn.C[1]-pn.G[1]-pb[1]]);
+   const rv=[qdm[0]-(xp[1][0]+a[0]*.02),qdm[1]-(xp[1][1]+a[1]*.02)],c=slv([[1,0],[0,1]],rv),Mr=[n.M[0][0]*c[0]+n.M[0][1]*c[1],n.M[1][0]*c[0]+n.M[1][1]*c[1]];
+   dh=[Math.max(-40,Math.min(40,dh[0]+.4*Mr[0]/.02)),Math.max(-40,Math.min(40,dh[1]+.4*Mr[1]/.02))]}
+  const wn=10+N*.9,kp=wn*wn,kd=2*wn,ac=[qddr[0]+kd*ed[0]+kp*e[0],qddr[1]+kd*ed[1]+kp*e[1]];
+  uc=[n.M[0][0]*ac[0]+n.M[0][1]*ac[1]+n.C[0]+n.G[0]+bf[0]-dh[0],n.M[1][0]*ac[0]+n.M[1][1]*ac[1]+n.C[1]+n.G[1]+bf[1]-dh[1]]}
+ u=clampU(uc);xp=[qm,qdm];up=u;return{qr,e}}
+function plant(dt){
+ const dsb=pulse&&(t%3)<.15?[20,40]:[0,0],tc=contactJS(q,qd),ha=hipNow().a,bf=ha?BB(PL,q,ha):[0,0],p=MCG(PL,q,qd),a=slv(p.M,[u[0]+dsb[0]+tc[0]-bf[0]-p.C[0]-p.G[0]-1.5*qd[0],u[1]+dsb[1]+tc[1]-bf[1]-p.C[1]-p.G[1]-1.5*qd[1]]);
+ qd=[qd[0]+a[0]*dt,qd[1]+a[1]*dt];q=[q[0]+qd[0]*dt,q[1]+qd[1]*dt];t+=dt;phi+=fHz*dt;dist=S?S.pel(phi-.5)[0]:dist+vg1*fHz*dt;
+ E+=Math.max(0,u[0]*qd[0])*dt+Math.max(0,u[1]*qd[1])*dt}
+const SD=window.SIM_DATA||null;let idx=0,SDtr=[0,0];
+function resetPB(){idx=0;t=0;phi=0;E=0;viol=0;steps=0;e2=[0,0];u2=[0,0];strides=0;peaks=[];minq=0;hist=[];lastS=0;dist=0}
+if(SD){A=ACT[SD.act]||ACT.walking;fHz=1/SD.Tg;ctrl=SD.names.includes('MPC')?'MPC':SD.names[0];q=SD.d[ctrl].q[0];
+ S=A.stairs&&SD.terrain&&SD.terrain.kind==='stairs'?SG[String(A.stairs)]:null;if(S&&SD.terrain.W)S.W=SD.terrain.W;
+ if(SD.hip){let st=0,sy=0,stt=0,sty=0;const n=SD.hip.length;for(let i=0;i<n;i++){const tt=i*SD.Ts;st+=tt;sy+=SD.hip[i][1];stt+=tt*tt;sty+=tt*SD.hip[i][1]}
+  const sl=(n*sty-st*sy)/Math.max(1e-9,n*stt-st*st);SDtr=[sl,(sy-sl*st)/n]}
+ $('simctl').style.display='none';$('simctl2').style.display='none';
+ $('cbox').innerHTML=SD.names.map(n=>'<label style="margin:6px 0"><input type="radio" name="c" value="'+n+'"'+(n===ctrl?' checked':'')+'> '+n+'</label>').join('')+'<div class="foot">Playing back the Python simulation. Activity and parameters are set in the Streamlit sidebar.</div>';
+ document.querySelectorAll('[data-a]').forEach(b=>{b.disabled=true;b.style.opacity=.55;b.classList.toggle('on',b.dataset.a===SD.act)});$('actname').textContent=A.n}
+function pbStep(){idx++;if(idx>=SD.n)resetPB();const d=SD.d[ctrl],Ts=SD.Ts;q=d.q[idx];u=d.u[idx];t=idx*Ts;phi=t/SD.Tg;dist=SD.hip?SD.hip[idx][0]-SD.hip[0][0]:dist+A.v*Ts;lastF=d.fc?d.fc[idx]:0;
+ E+=(Math.max(0,u[0]*d.qd[idx][0])+Math.max(0,u[1]*d.qd[idx][1]))*Ts;steps++;viol+=(q[0]<SD.qmin[0]||q[0]>SD.qmax[0]||q[1]<SD.qmin[1]||q[1]>SD.qmax[1])?1:0;minq=Math.min(minq,q[1]);
+ if(Math.floor(phi)>lastS){lastS=Math.floor(phi);strides++;peaks.push(-minq);minq=0}
+ const r=SD.qref[idx],e=[r[0]-q[0],r[1]-q[1]];e2=[e2[0]+(e[0]**2-e2[0])*.01,e2[1]+(e[1]**2-e2[1])*.01];u2=[u2[0]+(u[0]**2-u2[0])*.01,u2[1]+(u[1]**2-u2[1])*.01];
+ hist.push({t,dsr:r,act:q});if(hist.length>620)hist.shift()}
+/* ---------- 3D scene ---------- */
+const view=$('view'),scene=new T.Scene();scene.background=new T.Color(0x9cc7ea);scene.fog=new T.Fog(0x9cc7ea,14,70);
+const cam=new T.PerspectiveCamera(38,1,.1,200),ren=new T.WebGLRenderer({antialias:true});ren.shadowMap.enabled=true;ren.setPixelRatio(Math.min(devicePixelRatio,2));view.appendChild(ren.domElement);
+scene.add(new T.HemisphereLight(0xffffff,0x557744,.95));const sun=new T.DirectionalLight(0xffffff,.9);sun.position.set(3,6,4);sun.castShadow=true;Object.assign(sun.shadow.camera,{left:-3,right:3,top:3,bottom:-3});sun.shadow.mapSize.set(1024,1024);scene.add(sun);
+const mat=(c,m=0,r=.7)=>new T.MeshStandardMaterial({color:c,metalness:m,roughness:r}),cyl=(a,b,h)=>new T.CylinderGeometry(a,b,h,22),box=(x,y,z)=>new T.BoxGeometry(x,y,z);
+const mesh=(g,m,p,par,sh=true)=>{const o=new T.Mesh(g,m);o.position.set(...p);o.castShadow=sh;o.receiveShadow=!sh;par&&par.add(o);return o};
+const road=mesh(new T.PlaneGeometry(300,7),mat(0x3b3f46,0,.9),[0,0,0],scene,false);road.rotation.x=-1.5708;
+const grass=[-1,1].map(s=>{const g=mesh(new T.PlaneGeometry(300,60),mat(0x4f8a3c,0,1),[0,-.01,s*33.5],scene,false);g.rotation.x=-1.5708;return g});
+const scroll=[];for(let i=0;i<14;i++){const m=mesh(box(1.2,.01,.12),mat(0xf2f2f2),[0,.006,0],scene,false);scroll.push({o:m,x:i*3,L:42})}
+for(let i=0;i<16;i++){const s=i%2?1:-1,z=s*(5+Math.random()*5),g=new T.Group();g.position.z=z;mesh(cyl(.12,.15,1.2),mat(0x5a3d22),[0,.6,0],g);mesh(new T.ConeGeometry(.9,2.6,14),mat(0x2f6b34),[0,2.3,0],g);scene.add(g);scroll.push({o:g,x:i*2.9,L:46,tree:1})}
+[[-30,-60,22],[10,-70,30],[50,-65,20]].forEach(([x,z,h])=>mesh(new T.ConeGeometry(h*.9,h*2,6),mat(0x6d7f93),[x,h,z],scene,false));
+/* terrain objects: stones / cracks on the road, staircase for stair activities */
+const stoneG=new T.DodecahedronGeometry(1,0),stoneM=mat(0x8d8a84,0,.95),crackM=mat(0x121315,0,1),unitBox=box(1,1,1);
+function obsMesh(o){if(o.m)return o.m;let m;if(o.k==='stone'){m=new T.Mesh(stoneG,stoneM);m.scale.set(o.w/2,o.h,o.w*.45);m.rotation.y=o.x*7.3%3;m.castShadow=true}
+ else{m=new T.Mesh(unitBox,crackM);m.scale.set(o.w,.004,.95);m.rotation.y=(o.x*3.1%1-.5)*.35}
+ m.position.set(0,o.k==='stone'?0:.003,.1);scene.add(m);o.m=m;return m}
+const stairG=new T.Group(),stepM=mat(0xb9b4aa,0,.85),noseM=mat(0x2f7bff,.2,.5),STEPS=[];scene.add(stairG);
+for(let i=0;i<26;i++){const g=new T.Group(),b=new T.Mesh(unitBox,stepM);b.scale.set(TREAD,1.4,1.4);b.position.y=-.7;b.castShadow=true;b.receiveShadow=true;g.add(b);
+ const n=new T.Mesh(unitBox,noseM);n.scale.set(.035,.012,1.4);n.position.y=.006;g.add(n);stairG.add(g);STEPS.push({g,n})}
+function drawTerrain(hipX,trendY,g0){const st=!!S;road.visible=!st;grass.forEach(g=>g.visible=!st);scroll.forEach(s=>s.o.visible=!st);stairG.visible=st;
+ if(st){const j0=S.idx(hipX)-12;STEPS.forEach((s,k)=>{const tr=S.tread(j0+k);s.g.position.set((tr[0]+tr[1])/2-hipX,tr[2]-g0-trendY+.004,0);s.n.position.x=(S.dir>0?-1:1)*(TREAD/2-.0175)})}
+ const list=SD&&SD.terrain&&SD.terrain.obstacles?SD.terrain.obstacles:obs,show=!st&&(SD?true:obsOn);
+ list.forEach(o=>{const vis=show&&Math.abs(o.x-hipX)<30;if(!vis&&!o.m)return;const m=obsMesh(o);m.visible=vis;m.position.x=o.x-hipX})}
+const root=new T.Group();scene.add(root);
+function leg(pros,z){const hip=new T.Group(),kn=new T.Group(),an=new T.Group();hip.position.z=z;kn.position.y=-.45;an.position.y=-.45;hip.add(kn);kn.add(an);
+ if(pros){mesh(cyl(.088,.06,.45),mat(0x15181d,.5,.35),[0,-.225,0],hip);const j=mesh(cyl(.05,.05,.13),mat(0x9aa4b2,.9,.25),[0,0,0],kn);j.rotation.x=1.5708;mesh(new T.TorusGeometry(.056,.011,8,24),mat(0x2f7bff,.3,.4),[0,0,.07],kn);mesh(cyl(.026,.026,.45),mat(0xb8c0cc,.9,.2),[0,-.225,0],kn);mesh(box(.27,.035,.09),mat(0x14161a,.3,.4),[.07,-.05,0],an);mesh(box(.12,.02,.09),mat(0x2f7bff),[.0,-.02,0],an)}
+ else{mesh(cyl(.075,.055,.45),mat(0xd9a07c),[0,-.225,0],hip);mesh(cyl(.092,.082,.22),mat(0x15171c),[0,-.11,0],hip);mesh(cyl(.055,.04,.45),mat(0xd9a07c),[0,-.225,0],kn);mesh(new T.SphereGeometry(.058,14,12),mat(0xd9a07c),[0,0,0],kn);mesh(box(.27,.07,.1),mat(0xeeeeee),[.07,-.04,0],an)}
+ root.add(hip);return{hip,kn,an}}
+const LP=leg(true,.1),LH=leg(false,-.1),tr=new T.Group();root.add(tr);
+mesh(box(.2,.13,.3),mat(0x15171c),[0,.02,0],tr);const torso=mesh(cyl(.17,.13,.58),mat(0x3a3f47),[0,.36,0],tr);torso.scale.z=1.35;mesh(new T.SphereGeometry(.1,16,14),mat(0xd9a07c),[0,.76,0],tr);mesh(cyl(.04,.045,.1),mat(0xd9a07c),[0,.67,0],tr);mesh(new T.SphereGeometry(.115,18,16),mat(0xd9a07c),[.01,.84,0],tr);
+function arm(z){const s=new T.Group(),e=new T.Group();s.position.set(0,.6,z);e.position.y=-.3;s.add(e);tr.add(s);mesh(cyl(.045,.04,.3),mat(0x3a3f47),[0,-.15,0],s);mesh(cyl(.038,.03,.28),mat(0xd9a07c),[0,-.14,0],e);mesh(new T.SphereGeometry(.04,10,10),mat(0xd9a07c),[0,-.29,0],e);return{s,e}}
+const AP=arm(.22),AH=arm(-.22);
+/* camera (drag = orbit) */
+let az=1.5708,el=.12,rad=3.4;const tgt=new T.Vector3(0,.95,0),VW={front:0,side:1.5708,back:3.1416};
+function setCam(){cam.position.set(tgt.x+rad*Math.cos(el)*Math.cos(az),tgt.y+rad*Math.sin(el),tgt.z+rad*Math.cos(el)*Math.sin(az));cam.lookAt(tgt)}
+let drag=null;view.onpointerdown=e=>{drag=[e.clientX,e.clientY]};addEventListener('pointerup',()=>drag=null);
+addEventListener('pointermove',e=>{if(!drag)return;az-=(e.clientX-drag[0])*.007;el=Math.max(-.1,Math.min(1.2,el+(e.clientY-drag[1])*.005));drag=[e.clientX,e.clientY]});
+view.onwheel=e=>{rad=Math.max(1.5,Math.min(8,rad+e.deltaY*.003));e.preventDefault()};
+document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{az=VW[b.dataset.v];el=.12;document.querySelectorAll('[data-v]').forEach(x=>x.classList.toggle('on',x===b))});
+$('rs').onclick=()=>{az=1.5708;el=.12;rad=3.4};$('zi').onclick=()=>rad=Math.max(1.5,rad-.5);$('zo').onclick=()=>rad=Math.min(8,rad+.5);
+function resize(){const w=view.clientWidth,h=view.clientHeight;ren.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix();['c1','c2'].forEach(i=>{const c=$(i),d=devicePixelRatio||1;c.width=c.clientWidth*d;c.height=c.clientHeight*d})}
+new ResizeObserver(resize).observe(view);addEventListener('resize',resize);
+/* ---------- UI ---------- */
+document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{act=b.dataset.a;A=ACT[act];fHz=A.f;$('fr').value=fHz;$('fv').textContent=fHz.toFixed(2);$('actname').textContent=A.n;document.querySelectorAll('[data-a]').forEach(x=>x.classList.toggle('on',x===b));
+ obs.forEach(o=>o.m&&scene.remove(o.m));setActivity();reset()});
+$('go').onclick=()=>running=true;$('stop').onclick=()=>{running=false;SD?resetPB():(obs.forEach(o=>o.m&&scene.remove(o.m)),reset())};
+$('fr').oninput=e=>{fHz=+e.target.value;$('fv').textContent=fHz.toFixed(2)};$('ns').oninput=e=>{noise=+e.target.value;$('nv').textContent=noise.toFixed(1)};$('hz').oninput=e=>{N=+e.target.value;$('hv').textContent=N};
+$('ob').onchange=e=>{obsOn=e.target.checked;if(!obsOn){obs.forEach(o=>o.m&&scene.remove(o.m));obs=[]}obsNext=dist+4};
+document.querySelectorAll('[name=d]').forEach(r=>r.onchange=()=>pulse=r.value==='pulse'&&r.checked);document.querySelectorAll('[name=c]').forEach(r=>r.onchange=()=>{if(r.checked){ctrl=r.value;dh=[0,0];I=[0,0];if(SD)resetPB()}});
+/* ---------- charts ---------- */
+function chart(id,k,lo,hi,sgn){const c=$(id),x=c.getContext('2d'),W=c.width,H=c.height,d=devicePixelRatio||1,L=38*d,B=22*d,pw=W-L-8*d,ph=H-B-8*d;x.clearRect(0,0,W,H);x.font=11*d+'px Arial';x.fillStyle='#8fa3c7';x.strokeStyle='#1c2d4d';x.lineWidth=1;
+ const Y=v=>8*d+ph*(1-(v-lo)/(hi-lo));for(let v=lo;v<=hi;v+=(hi-lo)/4){x.beginPath();x.moveTo(L,Y(v));x.lineTo(W-8*d,Y(v));x.stroke();x.fillText(Math.round(v),4*d,Y(v)+4*d)}
+ const t1=hist.length?hist[hist.length-1].t:12,t0=t1-12,X=tt=>L+pw*(tt-t0)/12;for(let s=Math.ceil(t0/2)*2;s<=t1;s+=2)x.fillText(s,X(s)-4*d,H-6*d);
+ [['dsr','#3b82f6',[6*d,5*d]],['act',' #ffa91f',[]]].forEach(([n,col,dash])=>{x.beginPath();x.setLineDash(dash);x.strokeStyle=col.trim();x.lineWidth=2*d;let f=1;hist.forEach(h=>{if(h.t<t0)return;const px=X(h.t),py=Y(h[n][k]*sgn/D2R);f?(x.moveTo(px,py),f=0):x.lineTo(px,py)});x.stroke();x.setLineDash([])})}
+/* ---------- main loop ---------- */
+let last=null,acc=0,hAcc=0;
+function frame(ts){requestAnimationFrame(frame);const dtF=last?Math.min(.05,(ts-last)/1000):0;last=ts;let info=null;
+ if(SD&&running){acc+=dtF;while(acc>=.02){acc-=.02;pbStep()}}
+ if(running&&!SD){ensureObs();acc+=dtF;while(acc>=.005){if(Math.round(t/.005)%4===0)info=control()||info;plant(.005);acc-=.005;steps++;
+   const o=q[0]<QMIN[0]||q[0]>QMAX[0]||q[1]<QMIN[1]||q[1]>QMAX[1];viol+=o?1:0;minq=Math.min(minq,q[1]);
+   if(Math.floor(phi)>lastS){lastS=Math.floor(phi);strides++;peaks.push(-minq);minq=0}}
+  hAcc+=dtF;if(hAcc>=.02){hAcc=0;const r=refA(phi-.5);hist.push({t,dsr:r,act:[q[0],q[1]]});if(hist.length>620)hist.shift();
+   const e=[r[0]-q[0],r[1]-q[1]],k=.02/2;e2=[e2[0]+(e[0]**2-e2[0])*k,e2[1]+(e[1]**2-e2[1])*k];u2=[u2[0]+(u[0]**2-u2[0])*k,u2[1]+(u[1]**2-u2[1])*k]}}
+ const fr=SD?acc/.02:0,L2=(a,b)=>[a[0]+(b[0]-a[0])*fr,a[1]+(b[1]-a[1])*fr],i1=SD?(idx+1)%SD.n:0,hr=SD?L2(SD.healthy[idx],SD.healthy[i1]):refA(phi),pq=SD?L2(SD.d[ctrl].q[idx],SD.d[ctrl].q[i1]):q,hv=l=>l[0]*0+Math.cos(l[0])*.45+Math.cos(l[0]+l[1])*.45;
+ // hip placement: sim-driven (Python data or stairs) -> exact hip height above the terrain; otherwise original "lowest foot on the road"
+ let hipX=dist,hipY=0,trendY=0,g0=gLevel,py;
+ if(SD&&SD.hip){const i2=i1<idx?idx:i1,hp=L2(SD.hip[idx],SD.hip[i2]);hipX=hp[0];hipY=hp[1];trendY=SDtr[0]*(t+fr*SD.Ts)+SDtr[1];g0=SD.terrain.ground0;py=.084-g0+hipY-trendY}
+ else if(S){const p=phi-.5,pp=S.pel(p);hipX=pp[0];hipY=pp[1];trendY=S.v[1]*p;g0=S.tread(0)[2];py=.084-g0+hipY-trendY}
+ else if(obsOn&&!SD){py=.084-gLevel}
+ else py=Math.max(hv(hr),hv(pq))+.08;
+ root.position.y=py;tr.rotation.z=-A.lean;drawTerrain(hipX,trendY,g0);
+ const setLeg=(L,qq)=>{L.hip.rotation.z=qq[0];L.kn.rotation.z=qq[1];const h=py-hv(qq)-.08,s=.3+.7*Math.exp(-Math.max(0,h)/.04);L.an.rotation.z=(1-s)*.12-(qq[0]+qq[1]);return L.an.rotation.z*-1*0+((1-s)*.12-(qq[0]+qq[1]))};
+ const rp=setLeg(LP,pq),rh=setLeg(LH,hr);
+ AP.s.rotation.z=-(hr[0]-A.h0)*A.arm*1.4;AH.s.rotation.z=-(pq[0]-A.h0)*A.arm*1.4;AP.e.rotation.z=AH.e.rotation.z=A.elb;
+ const dd=SD?(SD.terrain?SD.terrain.speed:A.v):(S?Math.hypot(S.v[0],S.v[1])*fHz:vg1*fHz);scroll.forEach(s=>{const m=((s.x-dist)%s.L+s.L)%s.L-s.L/2;s.o.position.x=m});
+ setCam();ren.render(scene,cam);
+ $('hh').textContent=(hr[0]/D2R).toFixed(1);$('hk').textContent=(-hr[1]/D2R).toFixed(1);$('ha').textContent=(rh/D2R).toFixed(1);
+ $('ph').textContent=(pq[0]/D2R).toFixed(1);$('pk').textContent=(-pq[1]/D2R).toFixed(1);$('pa').textContent=(rp/D2R).toFixed(1);
+ $('spd').textContent=dd.toFixed(1);$('tm').textContent=t.toFixed(1);$('eh').textContent=Math.sqrt(e2[0]).toFixed(2);$('ek').textContent=Math.sqrt(e2[1]).toFixed(2);
+ $('th').textContent=Math.sqrt(u2[0]).toFixed(1);$('tk').textContent=Math.sqrt(u2[1]).toFixed(1);$('en').textContent=E.toFixed(1);$('pw').textContent=(E/Math.max(t,.1)).toFixed(1);
+ const vp=steps?100*viol/steps:0;$('cv').textContent=vp.toFixed(1)+'%';$('cv').style.color=vp<5?'var(--gr)':'var(--rd)';
+ $('gs').textContent=strides;if(peaks.length>2){const m=peaks.reduce((a,b)=>a+b)/peaks.length,sd=Math.sqrt(peaks.reduce((a,b)=>a+(b-m)**2,0)/peaks.length);$('gc').textContent=(100*sd/m).toFixed(1)+'%'}
+ $('gd').textContent=dist.toFixed(1);$('gp').textContent=((phi-.5)%1+1)%1<.5?'Right (prosthesis)':'Left (healthy)';
+ const ol=SD&&SD.terrain&&SD.terrain.obstacles?SD.terrain.obstacles:obs;
+ $('gt').textContent=S?(S.dir>0?'Stairs up':'Stairs down')+' 17/28 cm':((SD?ol.length>0:obsOn)?'Road, '+ol.filter(o=>o.k==='stone').length+' stones, '+ol.filter(o=>o.k==='crack').length+' cracks':'Flat road');
+ $('gf').textContent=lastF.toFixed(0);
+ chart('c1',0,-60,60,1);chart('c2',1,-30,(S||act==='running'||(SD&&SD.act==='running'))?120:90,-1)}
+resize();setCam();requestAnimationFrame(frame);
+</script></body></html>
